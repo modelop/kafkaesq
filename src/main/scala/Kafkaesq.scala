@@ -25,16 +25,16 @@ object Kafkaesq {
 	val MAX_WAIT_MS = 30000
 
   def usage = {
-    print("""Usage: kafkaesq [ options ] <input-topic> <output-topic>
-            |Options:
-            |  --input-file <file-name>       (no default)
-            |  --output-file <file-name>      (no default)
-            |  --bootstrap <host:port,...>    localhost:9092
-            |  --count <num>                  (# of inputs)
-            |  --batch-size <num>             1
-            |  --batch-pause <milliseconds>   0
-            |  --verbose                      false
-            |  --statistics                   false""".stripMargin)
+    println("""Usage: kafkaesq [ options ] <input-topic> <output-topic>
+              |Options:
+              |  --input-file <file-name>       (no default)
+              |  --output-file <file-name>      (no default)
+              |  --bootstrap <host:port,...>    localhost:9092
+              |  --count <num>                  (# of inputs)
+              |  --batch-size <num>             1
+              |  --batch-pause <milliseconds>   0
+              |  --verbose                      false
+              |  --statistics                   false""".stripMargin)
     sys.exit(1)
   }
 
