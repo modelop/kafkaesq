@@ -51,8 +51,9 @@ object Kafkaesq {
     var statistics = false
   }
 
+  val options = new Options
+
   def main(args: Array[String]) = {
-    val options = new Options
     val topics: ArrayBuffer[String] = new ArrayBuffer
 
     def parseOpts(argList: List[String]): Unit = argList match {
@@ -81,6 +82,9 @@ object Kafkaesq {
       case "--verbose" :: more =>
         options.verbose = true
         parseOpts(more)
+      case "-v" :: more =>
+        options.verbose = true
+        parseOpts(more)
       case "--statistics" :: more =>
         options.statistics = true
         parseOpts(more)
@@ -101,10 +105,10 @@ object Kafkaesq {
     options.inputTopic = topics(0)
     options.outputTopic = topics(1)
 
-    run(options)
+    run()
   }
 
-  def run(options: Options) {
+  def run() {
 
     // Collect inputs
     options.inputFile match {
@@ -114,7 +118,7 @@ object Kafkaesq {
         src.close
         if (options.verbose)
           println(s"${inputs.length} inputs read from $file")
-        run1(inputs, options)
+        run1(inputs)
 
       case None =>
         val buffer = new ArrayBuffer[String]
@@ -123,28 +127,28 @@ object Kafkaesq {
           if (x == null) {
             if (options.verbose)
               println(s"${buffer.length} inputs read from console")
-            run1(buffer.toArray, options)
+            run1(buffer.toArray)
           }
           buffer += x
         }
     }
   }
 
-  def run1(inputs: Array[String], options: Options) = {
+  def run1(inputs: Array[String]) = {
 		if (options.count.isEmpty)
         options.count = Some(inputs.length)
 
-    val consumer = make_consumer(options)
+    val consumer = make_consumer()
     val x = TopicAndPartition(options.outputTopic, 0)
     val savedOffset = consumer.earliestOrLatestOffset(x, -1, Request.DebuggingConsumerId)
     if (options.verbose)
       println(s"The latest offset for ${options.outputTopic}:0 is ${savedOffset}")
 
-    val producer = make_producer(options)
+    val producer = make_producer()
     if (options.verbose)
       println(s"Producer connected to Kafka at ${options.bootstrap}")
 
-		run2(inputs, producer, consumer, savedOffset, options)
+		run2(inputs, producer, consumer, savedOffset)
 	}
 
 	case class Position(var index: Int, var left: Int);
@@ -168,8 +172,7 @@ object Kafkaesq {
 	def run2(inputs: Array[String],
 					 producer: KafkaProducer[String,String],
 					 consumer: SimpleConsumer,
-					 savedOffset: Long,
-					 options: Options) = {
+					 savedOffset: Long) = {
 
     if (options.verbose)
       println(s"Batch size is ${options.batchSize}")
@@ -250,6 +253,7 @@ object Kafkaesq {
 		var offset = startOffset
 		while (n > 0) {
 			val maxBytes = 4*1024*1024
+      println(s"Requesting messages at offset $offset")
     	val fetchReq = builder.addFetch(topic, 0, offset, maxBytes).build
       val fetchResp = consumer.fetch(fetchReq)
       val messages = fetchResp.messageSet(topic, 0)
@@ -268,7 +272,7 @@ object Kafkaesq {
 		return offset
 	}
 
-  def make_consumer(options: Options): SimpleConsumer = {
+  def make_consumer(): SimpleConsumer = {
     val brokers = ClientUtils.parseBrokerList(options.bootstrap)
     val topicMeta = ClientUtils.fetchTopicMetadata(Set(options.outputTopic),
                                 brokers, CLIENT_ID, 3000).topicsMetadata
@@ -279,13 +283,13 @@ object Kafkaesq {
     if (partMetaOpt.isEmpty) {
       println(s"${options.outputTopic}:0 does not exist yet [retry in 1 sec]")
       Thread.sleep(1000)
-      return make_consumer(options)
+      return make_consumer()
     }
     val leaderOpt = partMetaOpt.get.leader
     if (leaderOpt.isEmpty) {
       println(s"Leader for ${options.outputTopic}:0 not elected yet [retry in 1 sec]")
       Thread.sleep(1000)
-      return make_consumer(options)
+      return make_consumer()
     }
       
     val hp = leaderOpt.get
@@ -294,7 +298,7 @@ object Kafkaesq {
     return new SimpleConsumer(hp.host, hp.port, 3000, 65536, CLIENT_ID)
   }
 
-  def make_producer(options: Options): KafkaProducer[String,String] = {
+  def make_producer(): KafkaProducer[String,String] = {
     val props = new Properties
     props.put("bootstrap.servers", options.bootstrap)
     props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer")
