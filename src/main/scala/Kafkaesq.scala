@@ -124,7 +124,7 @@ object Kafkaesq {
         val buffer = new ArrayBuffer[String]
         while (true) {
           val x = Console.readLine("* ")
-          if (x == null) {
+          if (x != null) {
             if (options.verbose)
               println(s"${buffer.length} inputs read from console")
             run1(buffer.toArray)
