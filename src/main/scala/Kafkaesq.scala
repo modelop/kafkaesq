@@ -25,7 +25,8 @@ object Kafkaesq {
 	val MAX_WAIT_MS = 30000
 
   def usage = {
-    println("""Usage: kafkaesq [ options ] <input-topic> <output-topic>
+    println("""v0.2
+Usage: kafkaesq [ options ] <input-topic> <output-topic>
               |Options:
               |  --input-file <file-name>       (no default)
               |  --output-file <file-name>      (no default)
@@ -95,7 +96,7 @@ object Kafkaesq {
         topics += topic
         parseOpts(more)
       case Nil => ()
-      case _ => usage 
+      case _ => usage
     }
 
     parseOpts(args.toList)
@@ -127,9 +128,10 @@ object Kafkaesq {
           if (x != null) {
             if (options.verbose)
               println(s"${buffer.length} inputs read from console")
-            run1(buffer.toArray)
+            val input = Array(x)
+            run1(input)
           }
-          buffer += x
+          // buffer += x
         }
     }
   }
@@ -157,7 +159,7 @@ object Kafkaesq {
 		var count = 0;
 		var total = 0.0;
 		var total2 = 0.0;
-		
+
 		def add(x: Double) = {
 			count += 1
 			total += x
@@ -253,7 +255,8 @@ object Kafkaesq {
 		var offset = startOffset
 		while (n > 0) {
 			val maxBytes = 4*1024*1024
-      println(s"Requesting messages at offset $offset")
+      if(options.verbose)
+        println(s"Requesting messages at offset $offset")
     	val fetchReq = builder.addFetch(topic, 0, offset, maxBytes).build
       val fetchResp = consumer.fetch(fetchReq)
       val messages = fetchResp.messageSet(topic, 0)
@@ -291,7 +294,7 @@ object Kafkaesq {
       Thread.sleep(1000)
       return make_consumer()
     }
-      
+
     val hp = leaderOpt.get
     if (options.verbose)
       println(s"Consumer connects to ${hp.host}:${hp.port}")
